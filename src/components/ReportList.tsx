@@ -7,8 +7,8 @@ import type { Report } from "@/types/Report";
 
 interface ReportListProps {
   reports: Report[];
-  selectedId: number | null;
-  onSelect: (id: number) => void;
+  selectedId: string | null;
+  onSelect: (id: string) => void;
 }
 
 const ReportList = ({ reports, selectedId, onSelect }: ReportListProps) => {
@@ -21,8 +21,10 @@ const ReportList = ({ reports, selectedId, onSelect }: ReportListProps) => {
   );
 
   const formatDate = (dateStr: string) => {
-    const [y, m, d] = dateStr.split("-");
-    return `${d}/${m}/${y}`;
+    const parsedDate = new Date(dateStr);
+    return Number.isNaN(parsedDate.getTime())
+      ? dateStr
+      : parsedDate.toLocaleDateString("pt-BR");
   };
 
   return (

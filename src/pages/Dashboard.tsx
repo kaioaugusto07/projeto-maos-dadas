@@ -1,6 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
-import { BookOpen, RefreshCw, HandHeart, LogOut } from "lucide-react";
+import { BookOpen, RefreshCw, HandHeart, LogOut, Settings } from "lucide-react";
 
 
 interface CardItem {
@@ -54,6 +54,7 @@ const Dashboard = () => {
   const handleSair = () => {
     localStorage.removeItem("autenticado");
     localStorage.removeItem("user");
+    localStorage.removeItem("token");
     navigate("/");
   };
 
@@ -70,13 +71,24 @@ const Dashboard = () => {
               Bem-vindo(a), <span className="font-medium text-card-foreground">{primeiroNome}</span>
             </p>
           </div>
-          <button
-            onClick={handleSair}
-            className="flex items-center gap-2 rounded-lg border border-border px-4 py-2 text-sm font-medium text-muted-foreground transition hover:bg-secondary hover:text-card-foreground"
-          >
-            <LogOut className="h-4 w-4" />
-            Sair
-          </button>
+          <div className="flex items-center gap-2">
+            {role === "admin" && (
+              <button
+                onClick={() => navigate("/administrar")}
+                className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground transition hover:opacity-90"
+              >
+                <Settings className="h-4 w-4" />
+                Administrar
+              </button>
+            )}
+            <button
+              onClick={handleSair}
+              className="flex items-center gap-2 rounded-lg border border-border px-4 py-2 text-sm font-medium text-muted-foreground transition hover:bg-secondary hover:text-card-foreground"
+            >
+              <LogOut className="h-4 w-4" />
+              Sair
+            </button>
+          </div>
         </div>
       </header>
 

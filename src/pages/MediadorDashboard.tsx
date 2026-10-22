@@ -1,4 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
+import { ArrowLeft, Pencil } from "lucide-react";
+import { apiFetch } from "@/lib/api";
 
 
 interface User {
@@ -8,7 +11,7 @@ interface User {
 }
 
 interface Report {
-  id?: string;
+  id: string;
   userId: string;
   date: string;
   school: string;
@@ -80,6 +83,7 @@ function formatDate(dateStr: string) {
 }
 
 export default function MediadorDashboard() {
+  const navigate = useNavigate();
   const [user, setUser] = useState<User | null>(null);
   const [reports, setReports] = useState<Report[]>([]);
   const [form, setForm] = useState(emptyForm);
@@ -87,12 +91,13 @@ export default function MediadorDashboard() {
   const [submitting, setSubmitting] = useState(false);
   const [feedback, setFeedback] = useState<{ type: "success" | "error"; msg: string } | null>(null);
   const [selectedReport, setSelectedReport] = useState<Report | null>(null);
+  const [editingReportId, setEditingReportId] = useState<string | null>(null);
 
   const fetchReports = useCallback(async (userId: string) => {
     try {
       setLoading(true);
 
-      const res = await fetch(`${API_BASE}/reports/${userId}`);
+      const res = await apiFetch(`${API_BASE}/reports/${userId}`);
       if (!res.ok) {
         const text = await res.text();
         console.log("ERRO BACKEND:", text);
@@ -142,20 +147,49 @@ export default function MediadorDashboard() {
     try {
       setSubmitting(true);
       setFeedback(null);
-      const res = await fetch(`${API_BASE}/reports`, {
-        method: "POST",
+      const isEditing = editingReportId !== null;
+      const res = await apiFetch(
+        `${API_BASE}/reports${isEditing ? `/${editingReportId}` : ""}`,
+        {
+        method: isEditing ? "PATCH" : "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId: user.id, ...form }),
-      });
+        body: JSON.stringify(form),
+        },
+      );
       if (!res.ok) throw new Error("Erro ao enviar relatório");
       setForm(emptyForm);
-      setFeedback({ type: "success", msg: "Relatório criado com sucesso!" });
+      setEditingReportId(null);
+      setFeedback({
+        type: "success",
+        msg: isEditing ? "Relatório atualizado com sucesso!" : "Relatório criado com sucesso!",
+      });
       await fetchReports(user.id);
     } catch {
       setFeedback({ type: "error", msg: "Erro ao criar relatório." });
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const handleEdit = (report: Report) => {
+    setForm({
+      date: report.date.slice(0, 10),
+      school: report.school,
+      studentName: report.studentName,
+      grade: report.grade,
+      class: report.class,
+      instrument: report.instrument,
+      behavior: report.behavior,
+      readingLevel: report.readingLevel,
+      comprehension: report.comprehension,
+    });
+    setEditingReportId(report.id);
+    setSelectedReport(null);
+  };
+
+  const cancelEdit = () => {
+    setForm(emptyForm);
+    setEditingReportId(null);
   };
 
   useEffect(() => {
@@ -182,12 +216,22 @@ export default function MediadorDashboard() {
             <h1 className="text-xl font-bold tracking-tight">Secretaria de Educação</h1>
             <p className="text-sm opacity-80">Painel do Mediador</p>
           </div>
-          {user && (
-            <div className="text-right text-sm">
-              <p className="font-medium">{user.name}</p>
-              <p className="opacity-70 capitalize">{user.role}</p>
-            </div>
-          )}
+            <div className="flex items-center gap-4">
+              {user && (
+                <div className="text-right text-sm">
+                  <p className="font-medium">{user.name}</p>
+                  <p className="opacity-70 capitalize">{user.role}</p>
+                </div>
+              )}
+              <button
+                type="button"
+                onClick={() => navigate("/dashboard")}
+                className="flex items-center gap-1 rounded border border-primary-foreground/30 px-3 py-1.5 text-primary-foreground/80 transition-colors hover:text-primary-foreground"
+              >
+                <ArrowLeft className="h-4 w-4" />
+                <span className="text-sm font-medium">Voltar</span>
+              </button>
+              </div>
         </div>
       </header>
 
@@ -280,6 +324,13 @@ export default function MediadorDashboard() {
 
                   <div className="p-5 border-t border-border">
                     <button
+                      onClick={() => handleEdit(selectedReport)}
+                      className="mb-2 flex w-full items-center justify-center gap-2 rounded-md border border-border px-4 py-2 text-sm font-medium hover:bg-secondary"
+                    >
+                      <Pencil className="h-4 w-4" />
+                      Editar meu relatório
+                    </button>
+                    <button
                       onClick={() => setSelectedReport(null)}
                       className="w-full px-4 py-2 bg-secondary rounded-md"
                     >
@@ -296,9 +347,18 @@ export default function MediadorDashboard() {
           <section className="lg:col-span-3">
             <h2 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
               <span className="w-1.5 h-5 bg-accent rounded-full inline-block" />
-              Novo Relatório
+              {editingReportId ? "Editar meu relatório" : "Novo Relatório"}
             </h2>
 
+            {editingReportId && (
+              <button
+                type="button"
+                onClick={cancelEdit}
+                className="mb-3 rounded-md border border-border px-3 py-2 text-sm hover:bg-secondary"
+              >
+                Cancelar edição
+              </button>
+            )}
             <form
               onSubmit={handleSubmit}
               className="bg-card rounded-lg border border-border p-6 shadow-sm"
@@ -320,7 +380,9 @@ export default function MediadorDashboard() {
                 disabled={submitting}
                 className="mt-6 w-full sm:w-auto px-6 py-2.5 bg-primary text-primary-foreground rounded-md font-medium text-sm hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {submitting ? "Enviando..." : "Criar Relatório"}
+                {submitting
+                  ? editingReportId ? "Salvando..." : "Enviando..."
+                  : editingReportId ? "Salvar alterações" : "Criar Relatório"}
               </button>
             </form>
           </section>

@@ -13,16 +13,19 @@ import {
   MapPin,
   ArrowLeft,
 } from "lucide-react";
-import type { Report } from "@/data/mockData";
+import type { Report } from "@/types/Report";
 
 interface ReportDetailProps {
   report: Report;
   onBack: () => void;
+  onEdit?: () => void;
 }
 
 const formatDate = (dateStr: string) => {
-  const [y, m, d] = dateStr.split("-");
-  return `${d}/${m}/${y}`;
+  const parsedDate = new Date(dateStr);
+  return Number.isNaN(parsedDate.getTime())
+    ? dateStr
+    : parsedDate.toLocaleDateString("pt-BR");
 };
 
 const SectionHeader = ({ icon: Icon, title }: { icon: React.ElementType; title: string }) => (
@@ -58,11 +61,12 @@ const BadgeList = ({ items }: { items: string[] | string }) => {
   );
 };
 
-const ReportDetail = ({ report, onBack }: ReportDetailProps) => {
+const ReportDetail = ({ report, onBack, onEdit }: ReportDetailProps) => {
   return (
     <div className="space-y-2">
       {/* Header */}
-      <div className="flex items-center gap-3">
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
         <Button variant="ghost" size="icon" onClick={onBack} className="shrink-0">
           <ArrowLeft className="h-4 w-4" />
         </Button>
@@ -74,6 +78,12 @@ const ReportDetail = ({ report, onBack }: ReportDetailProps) => {
             Relatório criado em {formatDate(report.data)}
           </p>
         </div>
+        </div>
+        {onEdit && (
+          <Button type="button" variant="outline" onClick={onEdit} className="shrink-0">
+            Editar meu relatório
+          </Button>
+        )}
       </div>
 
       <Separator />

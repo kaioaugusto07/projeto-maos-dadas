@@ -12,6 +12,7 @@ import Materiais from "./pages/RessigDashboard";
 import MaosDadas from "./pages/MaoDashboard.tsx";
 import Register from "./pages/Register.tsx";
 import PendingAcess from "./pages/PendingAcess.tsx";
+import AdminDashboard from "./pages/AdminDashboard.tsx";
 
 const queryClient = new QueryClient();
 
@@ -23,8 +24,13 @@ const ProtectedRoute = ({
   pendingAllowed?: boolean;
 }) => {
   const authenticated = localStorage.getItem("autenticado") === "true";
-  const user = JSON.parse(localStorage.getItem("user") || "null");
+  let user: { status?: string } | null = null;
   const token = localStorage.getItem("token");
+  try {
+    user = JSON.parse(localStorage.getItem("user") || "null");
+  } catch {
+    user = null;
+  }
 
   if (!authenticated || !user || !token) {
     return <Navigate to="/" replace />;
@@ -41,6 +47,27 @@ const ProtectedRoute = ({
   return children;
 };
 
+const AdminRoute = ({ children }: { children: JSX.Element }) => {
+  const token = localStorage.getItem("token");
+  let user: { role?: string; status?: string } | null = null;
+
+  try {
+    user = JSON.parse(localStorage.getItem("user") || "null");
+  } catch {
+    user = null;
+  }
+
+  if (!token || !user || user.status !== "APPROVED") {
+    return <Navigate to="/" replace />;
+  }
+
+  if (user.role !== "admin") {
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  return children;
+};
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
@@ -51,6 +78,8 @@ const App = () => (
           <Route path="/" element={<Login />} />
           <Route path="/cadastro" element={<Register />} />
           <Route path="/aguardando-aprovacao" element={<ProtectedRoute pendingAllowed><PendingAcess /></ProtectedRoute>} />
+          <Route path="/administrar" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
+          <Route path="/administrar/solicitacoes" element={<AdminRoute><AdminDashboard /></AdminRoute>} />
           <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
           <Route path="/mediador" element={<ProtectedRoute><MediadorDashboard /></ProtectedRoute>} />
           <Route path="/materiais" element={<ProtectedRoute><Materiais /></ProtectedRoute>} />

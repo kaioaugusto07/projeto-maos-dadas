@@ -22,9 +22,12 @@ import {
   ENCAMINHAMENTOS,
 } from "../../data/constants";
 import type { Report } from "@/types/Report";
+import { apiFetch } from "@/lib/api";
 
 interface ReportFormProps {
   onSave: (report: Report) => void;
+  reportToEdit?: Report;
+  onCancel?: () => void;
 }
 
 const initialForm = {
@@ -79,8 +82,26 @@ const CheckboxGroup = ({
   </div>
 );
 
-const ReportForm = ({ onSave }: ReportFormProps) => {
-  const [form, setForm] = useState(initialForm);
+const ReportForm = ({ onSave, reportToEdit, onCancel }: ReportFormProps) => {
+  const [form, setForm] = useState(() =>
+    reportToEdit
+      ? {
+          nome: reportToEdit.nome,
+          dataNascimento: reportToEdit.dataNascimento.slice(0, 10),
+          data: reportToEdit.data.slice(0, 10),
+          escola: reportToEdit.escola,
+          serie: reportToEdit.serie,
+          turma: reportToEdit.turma,
+          responsavel: reportToEdit.responsavel,
+          endereco: reportToEdit.endereco,
+          telefone: reportToEdit.telefone,
+          motivosSinalizacao: reportToEdit.motivosSinalizacao,
+          intervencoes: reportToEdit.intervencoes,
+          encaminhamentos: reportToEdit.encaminhamentos,
+          observacoes: reportToEdit.observacoes,
+        }
+      : initialForm,
+  );
   const [loading, setLoading] = useState(false);
 
   const update = <K extends keyof typeof initialForm>(
@@ -122,20 +143,20 @@ const ReportForm = ({ onSave }: ReportFormProps) => {
   try {
     setLoading(true);
 
-    const user = JSON.parse(localStorage.getItem("user") || "{}");
-
-
-    const res = await fetch("http://localhost:3000/api/reportsM", {
-      method: "POST",
+    const isEditing = reportToEdit !== undefined;
+    const res = await apiFetch(
+      `http://localhost:3000/api/reportsM${isEditing ? `/${reportToEdit.id}` : ""}`,
+      {
+      method: isEditing ? "PATCH" : "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         ...form,
-        userId: user.id,
         motivosSinalizacao: form.motivosSinalizacao.join(","), // <-- array para string
         intervencoes: form.intervencoes.join(","),             // <-- array para string
         encaminhamentos: form.encaminhamentos.join(","),       // <-- array para string
       }),
-    });
+      },
+    );
 
     if (!res.ok) {
       const err = await res.text();
@@ -160,6 +181,16 @@ const ReportForm = ({ onSave }: ReportFormProps) => {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-2">
+      {reportToEdit && (
+        <div className="flex items-center justify-between rounded-lg bg-secondary px-4 py-3">
+          <p className="text-sm font-medium text-secondary-foreground">Editando seu relatório</p>
+          {onCancel && (
+            <Button type="button" variant="outline" onClick={onCancel}>
+              Cancelar
+            </Button>
+          )}
+        </div>
+      )}
       {/* Dados Básicos */}
       <SectionHeader icon={User} title="Dados Básicos" />
       <div className="grid gap-4 sm:grid-cols-2">
@@ -268,7 +299,7 @@ const ReportForm = ({ onSave }: ReportFormProps) => {
           ) : (
             <>
               <Save className="mr-2 h-4 w-4" />
-              Salvar relatório
+              {reportToEdit ? "Salvar alterações" : "Salvar relatório"}
             </>
           )}
         </Button>
